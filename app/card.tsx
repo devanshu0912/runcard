@@ -6,6 +6,7 @@ import { useCanvasRef } from '@shopify/react-native-skia';
 
 import { Button } from '../src/components/Button';
 import { CARD_FORMATS, RunCard, type CardFormat } from '../src/components/RunCard';
+import { loadPrefs, savePrefs } from '../src/lib/prefs';
 import { PhotosPermissionError, saveCardImage, shareCardImage } from '../src/lib/share';
 import { useRun } from '../src/state/RunContext';
 import { CARD_THEMES } from '../src/theme/cardThemes';
@@ -15,7 +16,8 @@ export default function CardScreen() {
   const { run } = useRun();
   const { width } = useWindowDimensions();
   const canvasRef = useCanvasRef();
-  const [themeId, setThemeId] = useState(CARD_THEMES[0].id);
+  // Start on the theme they picked last time (falls back to the first theme below if it's gone).
+  const [themeId, setThemeId] = useState(() => loadPrefs().themeId ?? CARD_THEMES[0].id);
   const [format, setFormat] = useState<CardFormat>('4:5');
   const [sharing, setSharing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -96,7 +98,10 @@ export default function CardScreen() {
             return (
               <Pressable
                 key={t.id}
-                onPress={() => setThemeId(t.id)}
+                onPress={() => {
+                  setThemeId(t.id);
+                  savePrefs({ themeId: t.id });
+                }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: active }}
                 style={[styles.chip, active && styles.chipActive]}

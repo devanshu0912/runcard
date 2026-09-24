@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, router } from 'expo-router';
 import { useCanvasRef } from '@shopify/react-native-skia';
 
 import { Button } from '../src/components/Button';
 import { CARD_FORMATS, RunCard, type CardFormat } from '../src/components/RunCard';
-import { shareCardImage } from '../src/lib/share';
+import { PhotosPermissionError, saveCardImage, shareCardImage } from '../src/lib/share';
 import { useRun } from '../src/state/RunContext';
 import { CARD_THEMES } from '../src/theme/cardThemes';
 import { ui } from '../src/theme/ui';
@@ -18,6 +18,7 @@ export default function CardScreen() {
   const [themeId, setThemeId] = useState(CARD_THEMES[0].id);
   const [format, setFormat] = useState<CardFormat>('4:5');
   const [sharing, setSharing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   if (!run) return <Redirect href="/" />;
 
@@ -32,6 +33,35 @@ export default function CardScreen() {
       Alert.alert('Couldn’t share the card', e instanceof Error ? e.message : 'Try again.');
     } finally {
       setSharing(false);
+    }
+  }
+
+  async function handleSave() {
+    try {
+      setSaving(true);
+      await saveCardImage(canvasRef);
+      Alert.alert('Saved to photos', 'Your card is in your gallery.');
+    } catch (e) {
+      if (e instanceof PhotosPermissionError && !e.canAskAgain) {
+        // Android won't show the prompt again once it's been blocked, so send them to settings.
+        Alert.alert(
+          'Allow RunCard to save photos',
+          'Saving is turned off for RunCard. Open settings, allow Photos, then tap Save to photos again.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open settings', onPress: () => Linking.openSettings() },
+          ],
+        );
+      } else if (e instanceof PhotosPermissionError) {
+        Alert.alert(
+          'Couldn’t save the card',
+          'RunCard needs permission to save to your photos. Tap Save to photos again and choose Allow.',
+        );
+      } else {
+        Alert.alert('Couldn’t save the card', e instanceof Error ? e.message : 'Try again.');
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -80,6 +110,7 @@ export default function CardScreen() {
 
         <View style={styles.actions}>
           <Button label="Share card" onPress={handleShare} loading={sharing} />
+          <Button label="Save to photos" onPress={handleSave} loading={saving} variant="secondary" />
           <Button label="Make another" onPress={() => router.back()} variant="secondary" />
         </View>
       </ScrollView>

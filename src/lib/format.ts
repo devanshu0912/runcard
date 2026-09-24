@@ -21,8 +21,9 @@ export function formatDuration(totalSec: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
+/** 5 -> "5.00", 42.195 -> "42.20", 100 -> "100.0". Rounds first so 99.999 gives "100.0", not "100.00". */
 export function formatDistance(km: number): string {
-  return km >= 100 ? km.toFixed(1) : km.toFixed(2);
+  return Number(km.toFixed(2)) >= 100 ? km.toFixed(1) : km.toFixed(2);
 }
 
 export function formatSpeed(distanceKm: number, durationSec: number): string {

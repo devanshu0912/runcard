@@ -28,6 +28,16 @@ function readTag(body: string, tag: string): string | undefined {
   return m ? m[1].trim() : undefined;
 }
 
+/** "Run &amp; coffee" -> "Run & coffee". Handles the five XML entities and numeric ones. */
+export function decodeXmlEntities(s: string): string {
+  const named: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, code: string) => {
+    if (code[0] !== '#') return named[code.toLowerCase()] ?? whole;
+    const n = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+    return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : whole;
+  });
+}
+
 export function downsample<T>(points: T[], max: number): T[] {
   if (points.length <= max) return points;
   const step = Math.ceil(points.length / max);
@@ -75,6 +85,9 @@ export function parseGpx(xml: string): Run {
     );
   }
   const durationSec = (timed[timed.length - 1].time! - timed[0].time!) / 1000;
+  if (distanceM < 10 || durationSec <= 0) {
+    throw new Error('This file doesn’t show any movement. Check you picked the right run, or enter it manually.');
+  }
 
   // Elevation gain with a small dead-band so GPS altitude noise doesn't inflate it.
   let gain = 0;
@@ -93,7 +106,7 @@ export function parseGpx(xml: string): Run {
 
   const nameMatch = xml.match(/<trk>[\s\S]*?<name>([\s\S]*?)<\/name>/);
   const title = nameMatch
-    ? nameMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim() || undefined
+    ? decodeXmlEntities(nameMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '')).trim() || undefined
     : undefined;
 
   return {

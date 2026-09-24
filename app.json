@@ -26,7 +26,15 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow RunCard to access your photos.",
+          "savePhotosPermission": "Allow RunCard to save your run cards to your photos.",
+          "granularPermissions": ["photo"]
+        }
+      ]
     ],
     "scheme": "runcard"
   }
